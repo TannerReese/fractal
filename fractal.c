@@ -20,8 +20,12 @@ struct fractal_params{
 	enum fractal_type type;
 	bool is_julia;
 	complex julia_param;
+	
 } global_params = {100, 2, false, 0};
 
+// Bailout Radius for iteration
+double bailout_radius = 2;
+bool bailout_set = 0;  // Track whether value is default or set by user
 
 typedef struct{
 	/* color_count: Number of colors to cycle through
@@ -31,6 +35,9 @@ typedef struct{
 	 * A good ratio is   color_count * 10 = iters_per_cycle
 	 */
 	int color_count, iters_per_cycle;
+	
+	// Indicates that the color of points should be interpolated according to how far they go after escaping
+	bool is_continuous;
 	
 	// colors: array of 24-bit colors {red, green, blue} to cycle through
 	// set_color: color for non-escaping points
@@ -47,9 +54,9 @@ png_color starry_colors[] = {{0, 0, 100}, {10, 75, 150}, {252, 178, 0}, {240, 25
 		  firey_colors[] = {{183, 60, 0}, {224, 77, 30}, {237, 244, 26}, {118, 190, 252}, {255, 255, 255}},
 		  foresty_colors[] = {{23, 109, 24}, {170, 92, 32}, {175, 132, 66}, {27, 211, 205}};
 color_scheme_t schemes[] = {
-	{5, 50, starry_colors, {0, 0, 0}}, // starry
-	{5, 35, firey_colors, {0, 0, 0}}, // firey
-	{4, 40, foresty_colors, {0, 0, 0}} // foresty
+	{5, 50, 0, starry_colors, {0, 0, 0}}, // starry
+	{5, 35, 0, firey_colors, {0, 0, 0}}, // firey
+	{4, 40, 0, foresty_colors, {0, 0, 0}} // foresty
 };
 const char *scheme_names[] = {"starry", "firey", "foresty"};
 color_scheme_t global_scheme = {0};
@@ -77,6 +84,10 @@ error_t parse_opt(int key, char *arg, struct argp_state *state){
 		case 'p': // Set power
 			sscanf(arg, " %i", &global_params.power);
 		break;
+		case 'r': // Set bailout radius
+			sscanf(arg, " %lf", &bailout_radius);
+			bailout_set = 1;
+		break;
 		case 'M': global_params.type = SIMPLE_POWER;  // Mandelbrot:  z_(n+1) = z_n ^ p + c
 		break;
 		case 'B': global_params.type = ABSOLUTE_POWER;  // Burning Ship: z_(n+1) = (|Re{z_n}| + i * |Im{z_n}|) ^ p + c
@@ -101,11 +112,17 @@ error_t parse_opt(int key, char *arg, struct argp_state *state){
 		case 'd': // Set dimensions of screenshot image
 			sscanf(arg, " %i,%i", &scrshot_width, &scrshot_height);
 		break;
+		case 'c': // Set do continuous coloring
+			global_scheme.is_continuous = 1;
+			if(!bailout_set) bailout_radius = 500;
+		break;
 		case 'm':
 			// Find and set scheme
 			for(int i = 0; i < SCHEME_COUNT; i++){
 				if(strcmp(scheme_names[i], arg) == 0){
+					bool is_cont = global_scheme.is_continuous;
 					global_scheme = schemes[i];
+					global_scheme.is_continuous = is_cont;
 					return 0;
 				}
 			}
@@ -121,6 +138,7 @@ struct argp_option options[] = {
 	{"julia", 'j', "REAL,IMAG", 0, "Display the Julia Set for the given Complex Number (Note: if not specified mandelbrot is displayed)"},
 	{"iter", 'n', "ITERATIONS", 0, "Number of iterations to perform before falling through  (default: 100)"},
 	{"power", 'p', "POWER", 0, "Power to raise z to in iteration i.e. z_(n+1) = f(z_n) ^ p + c  (default: 2)"},
+	{"radius", 'r', "RADIUS", 0, "Radius within which iterations will continue i.e. |z_n| < RADIUS implies z_(n+1) will be calculated (default: 2)"},
 	{"mandel", 'M', 0, 0, "Use the standard mandelbrot rule for generation i.e. z_(n+1) = z_n ^ p + c (Standard)"},
 	{"burning-ship", 'B', 0, 0, "Use the burning ship rule for generation i.e. z_(n+1) = (|Re{z_n}| + i * |Im{z_n}|) ^ p + c"},
 	{"tricorn", 'T', 0, 0, "Use the tricorn rule for generation i.e. z_(n+1) = conj(z_n) ^ p + c"},
@@ -128,25 +146,42 @@ struct argp_option options[] = {
 	{"window", 'w', "WIDTH,HEIGHT", 0, "Provide width and height (in complex plane) of window  (default: 2, 2)"},
 	{"screenshot", 's', "FILE", 0, "File Path to store screenshots in (default: fractal_screenshot.png)"},
 	{"dimensions", 'd', "WIDTH,HEIGHT", 0, "Provide width and height (in pixels) of a screenshotted image  (default: 1000, 1000)"},
+	{"continuous", 'c', 0, 0, "In saved screenshots, interpolate the color of points depending on how far they escape. Also sets the default radius to 500 (default: false)"},
 	{"scheme", 'm', "SCHEME_NAME", 0, "Name of scheme (see below for provided color schemes)"},
 	{0}
 };
 struct argp argp = {options, parse_opt,
 	"",
-	"Display and Navigate the Mandelbrot and Julia Sets\vSchemes:\n\tstarry -- blue background with orange and white highlight\n\tfirey -- dark red background with yellow and blue highlight\n\tforesty -- dark green background with cyan and yellow highlight\n\nControls:\n\tArrows / WASD / HJKL -- Move viewport around complex plane\n\t'<' / '>' -- Zoom Out / Zoom In\n\t'[' / ']' -- Decrease Iterations / Increase Iterations\n\tY -- Take Screenshot (stored to -s option)\n\tQ -- Quit"
+	"Display and Navigate the Mandelbrot and Julia Sets\v"
+	"Schemes:\n"
+		"\tstarry -- blue background with orange and white highlight\n"
+		"\tfirey -- dark red background with yellow and blue highlight\n"
+		"\tforesty -- dark green background with cyan and yellow highlight\n"
+	"\n"
+	"Controls:\n"
+		"\tArrows / WASD / HJKL -- Move viewport around complex plane\n"
+		"\t'<' / '>' -- Zoom Out / Zoom In\n"
+		"\t'[' / ']' -- Decrease Iterations / Increase Iterations\n"
+		"\tC -- Toggle Continuous Coloring\n"
+		"\tY -- Take Screenshot (stored to -s option)\n"
+		"\tQ -- Quit"
 };
 
 
 
 
+// Convert complex numbers to cells in the terminal and vice versa
 complex comp_at_rc(viewport_t vw, int r, int c, int rows, int cols);
 void comp_to_rc(viewport_t vw, complex cmp, int *r, int *c, int rows, int cols);
-int orbit_count(enum fractal_type tp, complex point, complex param, int power, int max_iters);
+
+// Calculate the number of iterations of the function / rule before z_n escapes the bailout_radius
+int orbit_count(enum fractal_type tp, complex *point, complex param, int power, int max_iters);
+// Draw the fractal of the given parameters to the terminal
 void draw_complex(viewport_t vw, struct fractal_params prms);
 
 
 
-png_color scheme_get_color(color_scheme_t scm, int iters);
+png_color scheme_get_color(color_scheme_t scm, double iters);
 bool write_fractal(const char *filename, viewport_t vw, struct fractal_params prms, int width, int height, color_scheme_t scm);
 
 int main(int argc, char *argv[]){
@@ -180,7 +215,7 @@ int main(int argc, char *argv[]){
 	MEVENT evt;
 	bool running = true;
 	int rows, cols;
-	bool screenshot_finished = false;
+	bool screenshot_finished = false, cont_toggled = false;
 	while(running){
 		getmaxyx(stdscr, rows, cols);
 		// Draw fractal
@@ -194,10 +229,19 @@ int main(int argc, char *argv[]){
 			view.width, view.height
 		);
 		if(global_params.is_julia) printw("\t\tJulia At: %lf + %lf * i ", creal(global_params.julia_param), cimag(global_params.julia_param));
+		
+		// When screenshot is saved print message indicating it to the user
 		if(screenshot_finished){
 			mvprintw(rows - 2, 0, "Screenshot saved to %s ", screenshot_filename);
 			screenshot_finished = false;
 		}
+		
+		// When user toggles continuity indicate to user
+		if(cont_toggled){
+			mvprintw(rows - 2, 0, "Continuity turned %s ", global_scheme.is_continuous ? "On" : "Off");
+			cont_toggled = false;
+		}
+		
 		attroff(COLOR_PAIR(0));
 		
 		ch = getch();
@@ -240,6 +284,10 @@ int main(int argc, char *argv[]){
 				write_fractal(screenshot_filename, view, global_params, scrshot_width, scrshot_height, global_scheme);
 				screenshot_finished = true;
 			break;
+			case 'c': case 'C':
+				global_scheme.is_continuous ^= 1;
+				cont_toggled = true;
+			break;
 			case KEY_MOUSE:
 				if(getmouse(&evt) == OK){
 					mouse_loc = comp_at_rc(view, evt.y, evt.x, rows, cols);
@@ -274,28 +322,32 @@ void comp_to_rc(viewport_t vw, complex cmp, int *r, int *c, int rows, int cols){
 	*r = -cimag(cmp) * rows / vw.height;
 }
 
-int orbit_count(enum fractal_type tp, complex point, complex param, int power, int max_iters){
+// Count the number of iterations before the point escapes the bounding region (|z| < 2)
+// *point should contain the initial value
+// After call, *point will contain the last coordinate visited
+int orbit_count(enum fractal_type tp, complex *point, complex param, int power, int max_iters){
 	int count = 0, p;
 	complex prod;
-	// Generate orbit of given point using z_(n+1) = z_n ^ p + param with z_0 = point
-	while(cabs(point) < 2 && count < max_iters){
+	// Generate orbit of given point using z_(n+1) = z_n ^ p + param with z_0 = *point
+	while(cabs(*point) < bailout_radius && count < max_iters){
 		// Apply transform
 		switch(tp){
-			case ABSOLUTE_POWER: point = fabs(creal(point)) + I * fabs(cimag(point));
+			case ABSOLUTE_POWER: *point = fabs(creal(*point)) + I * fabs(cimag(*point));
 			break;
-			case CONJUGATE_POWER: point = conj(point);
+			case CONJUGATE_POWER: *point = conj(*point);
 			break;
 			case SIMPLE_POWER:
 			default:
 			break;
 		}
 		
-		prod = point;
-		for(p = power - 1; p > 0; p--) prod *= point;
-		point = prod + param;
+		prod = *point;
+		for(p = power - 1; p > 0; p--) prod *= *point;
+		*point = prod + param;
 		count++;
 	}
 	
+	// Negative value used to indicate that the point didn't escape
 	return count == max_iters ? -1 : count;
 }
 
@@ -304,16 +356,17 @@ int orbit_count(enum fractal_type tp, complex point, complex param, int power, i
 // Draw complex grid to terminal screen
 void draw_complex(viewport_t vw, struct fractal_params prms){
 	int rows, cols, i;
-	complex cmp;
+	complex cmp, jparam;
 	
 	getmaxyx(stdscr, rows, cols);
 	for(int r = 0; r < rows; r++) for(int c = 0; c < cols; c++){
 		cmp = comp_at_rc(vw, r, c, rows, cols);
 		// Create orbit and count length
 		if(prms.is_julia){
-			i = orbit_count(prms.type, cmp, prms.julia_param, prms.power, prms.iterations);
+			i = orbit_count(prms.type, &cmp, prms.julia_param, prms.power, prms.iterations);
 		}else{
-			i = orbit_count(prms.type, prms.julia_param, cmp, prms.power, prms.iterations);
+			jparam = prms.julia_param;
+			i = orbit_count(prms.type, &jparam, cmp, prms.power, prms.iterations);
 		}
 		
 		// Restrict colors to 7 (displayable by terminal)
@@ -328,23 +381,25 @@ void draw_complex(viewport_t vw, struct fractal_params prms){
 
 
 
-png_color scheme_get_color(color_scheme_t scm, int iters){
+png_color scheme_get_color(color_scheme_t scm, double iters){
 	// If point is in set return set_color
 	if(iters < 0) return scm.set_color;
 	
-	iters %= scm.iters_per_cycle;
-	int n = iters * scm.color_count / scm.iters_per_cycle;
+	// Collapse iters into the cycle length using modulo
+	iters = fmod(iters, (double)scm.iters_per_cycle);
+	int n = (int)(iters * scm.color_count / scm.iters_per_cycle);
+	
 	// Find 'distance' between iters and prior and subsequent colors
-	int r, s;
-	r = iters - n * scm.iters_per_cycle / scm.color_count;
-	s = scm.iters_per_cycle / scm.color_count - r;
+	double r, s;
+	r = iters * scm.color_count / scm.iters_per_cycle - n;
+	s = 1 - r;
 	
 	png_color c1 = scm.colors[n], c2 = scm.colors[(n + 1) % scm.color_count];
 	
 	// Weighted average of colors
-	c1.red = (s * c1.red + r * c2.red) * scm.color_count / scm.iters_per_cycle;
-	c1.green = (s * c1.green + r * c2.green) * scm.color_count / scm.iters_per_cycle;
-	c1.blue = (s * c1.blue + r * c2.blue) * scm.color_count / scm.iters_per_cycle;
+	c1.red = (int)(s * c1.red + r * c2.red);
+	c1.green = (int)(s * c1.green + r * c2.green);
+	c1.blue = (int)(s * c1.blue + r * c2.blue);
 	return c1;
 }
 
@@ -392,16 +447,25 @@ bool write_fractal(const char *filename, viewport_t vw, struct fractal_params pr
 	);
 	
 	png_bytep row;
-	int r, c, i;
-	complex cmp;
+	int r, c;
+	double i;
+	complex cmp, jparam;
+	// Iterate through pixels
 	for(r = 0; r < height; r++){
 		row = png_malloc(png_ptr, width * sizeof(png_color));
 		for(c = 0; c < width; c++){
 			cmp = comp_at_rc(vw, r, c, height, width);
+			// Calculate length before escape
 			if(prms.is_julia){
-				i = orbit_count(prms.type, cmp, prms.julia_param, prms.power, prms.iterations);
+				i = orbit_count(prms.type, &cmp, prms.julia_param, prms.power, prms.iterations);
 			}else{
-				i = orbit_count(prms.type, prms.julia_param, cmp, prms.power, prms.iterations);
+				jparam = prms.julia_param;
+				i = orbit_count(prms.type, &jparam, cmp, prms.power, prms.iterations);
+				cmp = jparam;
+			}
+			
+			if(scm.is_continuous && i > 0){
+				i -= log(log(cabs(cmp)) / log(bailout_radius)) / log(prms.power);
 			}
 			
 			((png_color*)row)[c] = scheme_get_color(scm, i);
