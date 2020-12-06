@@ -434,8 +434,8 @@ bool write_fractal(const char *filename, viewport_t vw, color_scheme_t scm){
 	double i;
 	complex cmp, seed = rule.param;
 	// Iterate through pixels
+	row = png_malloc(png_ptr, view.columns * sizeof(png_color));
 	for(r = 0; r < view.rows; r++){
-		row = png_malloc(png_ptr, view.columns * sizeof(png_color));
 		for(c = 0; c < view.columns; c++){
 			cmp = comp_at_rc(vw, r, c);
 			
@@ -454,6 +454,7 @@ bool write_fractal(const char *filename, viewport_t vw, color_scheme_t scm){
 		}
 		png_write_row(png_ptr, row);
 	}
+	png_free(png_ptr, row);
 	
 	rule.param = seed;
 	
