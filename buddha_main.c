@@ -141,6 +141,7 @@ struct argp argp = {options, parse_opt,
 		"\t'[' / ']' -- Decrease Max Iterations / Increase Max Iterations\n"
 		"\t';' / '\"' -- Decrease Min Iterations / Increase Min Iterations\n"
 		"\t'-' / '+' -- Decrease Brightness / Increase Brightness\n"
+		"\tF / G -- Decrease Plot Rate / Increase Plot Rate\n"
 		"\tC -- Clear Plot\n"
 		"\tB -- Clear and Redefine Plot Area as current window\n"
 		"\tP -- Pause / Play generation and plotting of orbits\n"
@@ -152,7 +153,7 @@ struct argp argp = {options, parse_opt,
 
 
 // Draw Information about Parameters to terminal
-void draw_labels(complex mouse_loc);
+void draw_labels(complex mouse_loc, bool generating);
 
 // Takes value in the range [0, 28]
 // Clamped if outside range
@@ -169,6 +170,7 @@ int main(int argc, char *argv[]){
 	// Ncurses Init
 	initscr();
 	curs_set(0);
+	noecho();
 	keypad(stdscr, TRUE);
 	timeout(1000);
 	
@@ -202,7 +204,7 @@ int main(int argc, char *argv[]){
 		
 		// Draw Plot
 		draw_plot(plot, view, gamm);
-		draw_labels(mouse_loc);
+		draw_labels(mouse_loc, generating);
 		refresh();
 		
 		// Get Keyboard command
@@ -281,16 +283,15 @@ int main(int argc, char *argv[]){
 				view.columns = plot.area.columns;
 				plot.area = view;
 			break;
-			/*
+			
 			// Decrease generation speed
 			case 'f': case 'F':
-				plots_per_sec /= 1.1;
+				plots_per_sec /= 1.5;
 			break;
 			// Increase generation speed
 			case 'g': case 'G':
-				plots_per_sec *= 1.1;
+				plots_per_sec *= 1.5;
 			break;
-			*/
 			
 			// Pause/Play Generation of Orbits
 			case 'p': case 'P':
@@ -330,21 +331,24 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-void draw_labels(complex mouse_loc){
+void draw_labels(complex mouse_loc, bool generating){
 	int rows, cols;
 	getmaxyx(stdscr, rows, cols);
 	
-	mvprintw(rows - 2, 0, " Min, Max Iters: %i, %i     Mouse: %lf + %lf * i     Points Plotted: %i ",
+	mvprintw(rows - 2, 0, " Min, Max Iters: %i, %i     Points Plotted: %i     Plots per Second: %i",
 		min_iters, max_iters,
-		creal(mouse_loc), cimag(mouse_loc),
-		plotted
+		plotted,
+		(int)plots_per_sec
 	);
 	
-	mvprintw(rows - 1, 0, " Plot: (%lf, %lf)     Window: (%lf, %lf)     Gamma: %lf ",
-		plot.area.width, plot.area.height,
+	mvprintw(rows - 1, 0, " Mouse: %lf + %lf * i     Window: (%lf, %lf)     Plot: (%lf, %lf)     Gamma: %lf ",
+		creal(mouse_loc), cimag(mouse_loc),
 		view.width, view.height,
+		plot.area.width, plot.area.height,
 		gamma
 	);
+	
+	if(!generating) mvprintw(rows - 3, 0, " (Paused) ");
 }
 
 
