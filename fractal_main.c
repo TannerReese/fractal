@@ -327,8 +327,6 @@ int main(int argc, char *argv[]){
 				running = false;
 			break;
 		}
-	
-		usleep(10000); // Sleep for a centisecond to relieve stress on CPU
 	}
 	
 	endwin();
