@@ -174,6 +174,7 @@ struct argp_option options[] = {
 	{"scheme", 'm', "SCHEME_NAME", 0, "Name of scheme (see below for provided color schemes)", 4},
 	{0}
 };
+
 struct argp argp = {options, parse_opt,
 	"",
 	"Display and Navigate the Mandelbrot and Julia Sets\v"
