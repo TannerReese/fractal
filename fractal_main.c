@@ -96,12 +96,15 @@ error_t parse_opt(int key, char *arg, struct argp_state *state){
 			}
 			radius_set = 1;
 		break;
+		
+		// Set Transform
 		case 'M': rule.trans = NULL;  // Mandelbrot:  z_(n+1) = z_n ^ p + c
 		break;
 		case 'B': rule.trans = crect;  // Burning Ship: z_(n+1) = (|Re{z_n}| + i * |Im{z_n}|) ^ p + c
 		break;
 		case 'T': rule.trans = conj;  // Tricorn: z_(n+1) = conj(z_n) ^ p + c
 		break;
+		
 		case 'z': // Set location of center of window in complex plane
 			switch(sscanf(arg, " %lf,%lf", &real, &imag)){
 				case 0:
@@ -156,19 +159,19 @@ error_t parse_opt(int key, char *arg, struct argp_state *state){
 }
 
 struct argp_option options[] = {
-	{"julia", 'j', "REAL[,IMAG]", 0, "Display the Julia Set for the given Complex Number (Note: if not specified mandelbrot is displayed)"},
-	{"iter", 'n', "ITERATIONS", 0, "Number of iterations to perform before falling through  (default: 100)"},
-	{"power", 'p', "REAL[,IMAG]", 0, "Power to raise z to in iteration i.e. z_(n+1) = f(z_n) ^ p + c  (default: 2)"},
-	{"radius", 'r', "RADIUS", 0, "Radius within which iterations will continue i.e. |z_n| < RADIUS implies z_(n+1) will be calculated (default: 2)"},
-	{"mandel", 'M', 0, 0, "Use the standard mandelbrot rule for generation i.e. z_(n+1) = z_n ^ p + c (Standard)"},
-	{"burning-ship", 'B', 0, 0, "Use the burning ship rule for generation i.e. z_(n+1) = (|Re{z_n}| + i * |Im{z_n}|) ^ p + c"},
-	{"tricorn", 'T', 0, 0, "Use the tricorn rule for generation i.e. z_(n+1) = conj(z_n) ^ p + c"},
-	{"position", 'z', "REAL[,IMAG]", 0, "Specify center of window when first starting  (default: 0 + 0i)"},
-	{"window", 'w', "WIDTH,HEIGHT", 0, "Provide width and height (in complex plane) of window  (default: 2, 2)"},
-	{"screenshot", 's', "FILE", 0, "File Path to store screenshots in (default: fractal_screenshot.png)"},
-	{"dimensions", 'd', "WIDTH,HEIGHT", 0, "Provide width and height (in pixels) of a screenshotted image  (default: 1000, 1000)"},
-	{"continuous", 'c', 0, 0, "In saved screenshots, interpolate the color of points depending on how far they escape. Also sets the default radius to 100 (default: false)"},
-	{"scheme", 'm', "SCHEME_NAME", 0, "Name of scheme (see below for provided color schemes)"},
+	{"julia", 'j', "REAL[,IMAG]", 0, "Display the Julia Set for the given Complex Number (Note: if not specified mandelbrot is displayed)", 1},
+	{"iter", 'n', "ITERATIONS", 0, "Number of iterations to perform before falling through  (default: 100)", 1},
+	{"power", 'p', "REAL[,IMAG]", 0, "Power to raise z to in iteration i.e. z_(n+1) = f(z_n) ^ p + c  (default: 2)", 1},
+	{"radius", 'r', "RADIUS", 0, "Radius within which iterations will continue i.e. |z_n| < RADIUS implies z_(n+1) will be calculated (default: 2)", 1},
+	{"mandel", 'M', 0, 0, "Use the standard mandelbrot rule for generation i.e. z_(n+1) = z_n ^ p + c (Standard)", 2},
+	{"burning-ship", 'B', 0, 0, "Use the burning ship rule for generation i.e. z_(n+1) = (|Re{z_n}| + i * |Im{z_n}|) ^ p + c", 2},
+	{"tricorn", 'T', 0, 0, "Use the tricorn rule for generation i.e. z_(n+1) = conj(z_n) ^ p + c", 2},
+	{"position", 'z', "REAL[,IMAG]", 0, "Specify center of window when first starting  (default: 0 + 0i)", 3},
+	{"window", 'w', "WIDTH,HEIGHT", 0, "Provide width and height (in complex plane) of window  (default: 2, 2)", 3},
+	{"screenshot", 's', "FILE", 0, "File Path to store screenshots in (default: fractal_screenshot.png)", 4},
+	{"dimensions", 'd', "WIDTH,HEIGHT", 0, "Provide width and height (in pixels) of a screenshotted image  (default: 1000, 1000)", 4},
+	{"continuous", 'c', 0, 0, "In saved screenshots, interpolate the color of points depending on how far they escape. Also sets the default radius to 100 (default: false)", 4},
+	{"scheme", 'm', "SCHEME_NAME", 0, "Name of scheme (see below for provided color schemes)", 4},
 	{0}
 };
 struct argp argp = {options, parse_opt,
