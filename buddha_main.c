@@ -128,7 +128,7 @@ struct argp_option options[] = {
 	{"window", 'w', "WIDTH,HEIGHT", 0, "Provide width and height (in complex plane, floating-point) of window  (default: 2, 2)", 3},
 	{"gamma", 'g', "GAMMA", 0, "Power to raise normalized bin count to in order to obtain greyscale  (default: 0.5)", 3},
 	{"screenshot", 's', "FILE", 0, "File Path to store screenshots in (default: fractal_screenshot.png)", 4},
-	{"dimensions", 'd', "ROWS,HEIGHT", 0, "Provide number of rows and columns in plot  (default: 1000, 1000)", 4},
+	{"dimensions", 'd', "COLUMNS,ROWS", 0, "Provide number of rows and columns in plot  (default: 1000, 1000)", 4},
 	{0}
 };
 
@@ -345,7 +345,7 @@ void draw_labels(complex mouse_loc, bool generating){
 		creal(mouse_loc), cimag(mouse_loc),
 		view.width, view.height,
 		plot.area.width, plot.area.height,
-		gamma
+		gamm
 	);
 	
 	if(!generating) mvprintw(rows - 3, 0, " (Paused) ");
