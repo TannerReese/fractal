@@ -29,7 +29,7 @@ plot_t plot = {{-2 + 2 * I /* Corner */, 4 /* Width */, 4 /* Height */, 1000 /* 
 int plotted = 0;  // Tracks total number of points plotted on plot
 
 #define SCREENSHOT_NAME_LENGTH 64
-char screenshot_filename[SCREENSHOT_NAME_LENGTH] = "fractal_screenshot.png";
+char screenshot_filename[SCREENSHOT_NAME_LENGTH] = "buddha_screenshot.png";
 
 error_t parse_opt(int key, char *arg, struct argp_state *state){
 	double real, imag;
@@ -103,7 +103,7 @@ error_t parse_opt(int key, char *arg, struct argp_state *state){
 		break;
 		
 		case 's': // Set screenshot filename
-			strcpy(screenshot_filename, arg);
+			strncpy(screenshot_filename, arg, SCREENSHOT_NAME_LENGTH);
 		break;
 		case 'd': // Set dimensions of plot
 			if(sscanf(arg, " %i,%i", &plot.area.columns, &plot.area.rows) < 2){
@@ -145,7 +145,8 @@ struct argp argp = {options, parse_opt,
 		"\tC -- Clear Plot\n"
 		"\tB -- Clear and Redefine Plot Area as current window\n"
 		"\tP -- Pause / Play generation and plotting of orbits\n"
-		"\tY -- Take Screenshot (stored to -s option)\n"
+		"\tY -- Take Screenshot of Window (stored to -s option)\n"
+		"\tU -- Take Screenshot of Whole Plot (stored to -s option)\n"
 		"\tQ -- Quit\n\n"
 		"Holding any Non-Assigned Key (e.g. Space Bar) speeds up generation and plotting of Orbits\n"
 };
@@ -304,9 +305,13 @@ int main(int argc, char *argv[]){
 				}
 			break;
 			
-			// Save screenshot of Plot
+			// Save screenshot of Current Window
 			case 'y': case 'Y':
-				write_plot("buddha_screenshot.png", plot, view, gamm);
+				write_plot(screenshot_filename, plot, view, gamm);
+			break;
+			// Save screenshot of Whole Plot
+			case 'u': case 'U':
+				write_plot(screenshot_filename, plot, plot.area, gamm);
 			break;
 			
 			
