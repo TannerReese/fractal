@@ -2,6 +2,7 @@
 #include <complex.h>
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <png.h>
 
@@ -39,16 +40,18 @@ char screenshot_filename[SCREENSHOT_NAME_LENGTH] = "fractal_screenshot.png";
 int scrshot_width = 1000, scrshot_height = 1000;
 
 // Color Schemes
-#define SCHEME_COUNT 3
+#define SCHEME_COUNT 4
 png_color starry_colors[] = {{0, 0, 100}, {10, 75, 150}, {252, 178, 0}, {240, 252, 121}, {255, 255, 255}},
 		  firey_colors[] = {{183, 60, 0}, {224, 77, 30}, {237, 244, 26}, {118, 190, 252}, {255, 255, 255}},
-		  foresty_colors[] = {{23, 109, 24}, {170, 92, 32}, {175, 132, 66}, {27, 211, 205}};
+		  foresty_colors[] = {{23, 109, 24}, {170, 92, 32}, {175, 132, 66}, {27, 211, 205}},
+		  purple_colors[] = {{0, 34, 112}, {70, 160, 54}, {237, 213, 37}, {125, 38, 205}};
 color_scheme_t schemes[] = {
 	{5, 50, 0, starry_colors, {0, 0, 0}}, // starry
 	{5, 35, 0, firey_colors, {0, 0, 0}}, // firey
-	{4, 40, 0, foresty_colors, {0, 0, 0}} // foresty
+	{4, 40, 0, foresty_colors, {0, 0, 0}}, // foresty
+	{4, 20, 0, purple_colors, {0, 0, 0}} // purple
 };
-const char *scheme_names[] = {"starry", "firey", "foresty"};
+const char *scheme_names[] = {"starry", "firey", "foresty", "purple"};
 color_scheme_t global_scheme = {0};
 
 
@@ -420,16 +423,14 @@ bool write_fractal(const char *filename, viewport_t vw, color_scheme_t scm){
 		return false;
 	}
 	
+	// Output PNG data
 	png_init_io(png_ptr, fl);
-	png_set_IHDR(png_ptr, info_ptr, view.columns, view.rows, 8,
-		PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE
-	);
-	
-	png_write_info(png_ptr, info_ptr);
 	png_set_IHDR(png_ptr, info_ptr, view.columns, view.rows,
 		8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
 	);
+	
+	png_write_info(png_ptr, info_ptr);
 	
 	png_bytep row;
 	int r, c;
@@ -443,6 +444,11 @@ bool write_fractal(const char *filename, viewport_t vw, color_scheme_t scm){
 			
 			// Calculate length of orbit before escape
 			if(!is_julia){
+				/* When calculating Mandelbrot, for example
+				 *   the point location, `cmp`, is used as the `c` in
+				 *   z -> z^2 + c
+				 *   while the initial value of z is uniform across the whole image
+				 */
 				rule.param = cmp;
 				cmp = seed;
 			}
@@ -456,12 +462,14 @@ bool write_fractal(const char *filename, viewport_t vw, color_scheme_t scm){
 		}
 		png_write_row(png_ptr, row);
 	}
-	png_free(png_ptr, row);
 	
-	rule.param = seed;
+	rule.param = seed;  // Reset rule.param since it may have been used to store cmp
 	
-	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+	png_write_end(png_ptr, NULL);  // End writing
+	png_free(png_ptr, row);  // Deallocate row storage
 	png_destroy_write_struct(&png_ptr, &info_ptr);
-	fclose(fl);
+	
+	fclose(fl);  // Close file descriptor
+	
 	return true;
 }
