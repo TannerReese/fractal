@@ -22,4 +22,6 @@ buddha.o: buddha.c buddha.h
 
 
 clean:
-	rm *.o
+	rm -f *.o  # Remove Object files
+	rm -f fractal ; rm -f buddha  # Remove binaries
+
