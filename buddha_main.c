@@ -3,6 +3,7 @@
 #include <math.h>
 #include <argp.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <png.h>
 
