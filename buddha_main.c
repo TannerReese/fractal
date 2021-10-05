@@ -452,15 +452,12 @@ bool write_plot(const char *filename, plot_t pl, viewport_t vw, double gamm){
 	
 	// Create header for file
 	png_init_io(png_ptr, fl);
-	png_set_IHDR(png_ptr, info_ptr, maxc - minc /* Image Width */, maxr - minr /* Image Height */, 8,
-		PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE
-	);
-	
-	png_write_info(png_ptr, info_ptr);
 	png_set_IHDR(png_ptr, info_ptr, maxc - minc, maxr - minr,
 		8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT
 	);
+	
+	png_write_info(png_ptr, info_ptr);
 	
 	int r, c;
 	
@@ -488,10 +485,11 @@ bool write_plot(const char *filename, plot_t pl, viewport_t vw, double gamm){
 		}
 		png_write_row(png_ptr, row);
 	}
-	png_free(png_ptr, row);
 	
-	png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, NULL);
+	png_write_end(png_ptr, NULL);  // End writing
+	png_free(png_ptr, row);
 	png_destroy_write_struct(&png_ptr, &info_ptr);
-	fclose(fl);
+	fclose(fl);  // Close file descriptor
+	
 	return true;
 }
